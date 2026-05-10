@@ -71,4 +71,36 @@ public class GlobalExceptionHandler {
                 HttpStatus.INTERNAL_SERVER_ERROR
         );
     }
+    @ExceptionHandler(ResourceNotFoundException.class)
+public ResponseEntity<?> handleResourceNotFound(
+        ResourceNotFoundException ex
+) {
+
+    Map<String, Object> response = new HashMap<>();
+
+    response.put("timestamp", LocalDateTime.now());
+    response.put("message", ex.getMessage());
+    response.put("status", HttpStatus.NOT_FOUND.value());
+
+    return new ResponseEntity<>(
+            response,
+            HttpStatus.NOT_FOUND
+    );
+}
+        @ExceptionHandler(WalletOperationException.class)
+public ResponseEntity<?> handleWalletOperation(
+        WalletOperationException ex
+) {
+
+    Map<String, Object> response = new HashMap<>();
+
+    response.put("timestamp", LocalDateTime.now());
+    response.put("message", ex.getMessage());
+    response.put("status", HttpStatus.BAD_REQUEST.value());
+
+    return new ResponseEntity<>(
+            response,
+            HttpStatus.BAD_REQUEST
+    );
+}
 }

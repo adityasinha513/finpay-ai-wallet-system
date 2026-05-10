@@ -8,12 +8,15 @@ import com.finpay.backend.auth.entity.User;
 import com.finpay.backend.auth.repository.UserRepository;
 import com.finpay.backend.common.exception.ResourceAlreadyExistsException;
 import com.finpay.backend.common.security.JwtUtil;
+import com.finpay.backend.wallet.service.WalletService;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.security.authentication.AuthenticationManager;
 import org.springframework.security.authentication.UsernamePasswordAuthenticationToken;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
+
+import com.finpay.backend.auth.enums.KycStatus;
 
 @Service
 @RequiredArgsConstructor
@@ -24,11 +27,14 @@ public class AuthService {
     private final PasswordEncoder passwordEncoder;
     private final AuthenticationManager authenticationManager;
     private final JwtUtil jwtUtil;
+    private final WalletService walletService;
 
     public RegisterResponse register(RegisterRequest request) {
 
         if (userRepository.existsByEmail(request.getEmail())) {
-            throw new ResourceAlreadyExistsException("Email already exists");
+            throw new ResourceAlreadyExistsException(
+                    "Email already exists"
+            );
         }
 
         User user = new User();
@@ -37,11 +43,21 @@ public class AuthService {
         user.setEmail(request.getEmail());
 
         // ENCRYPT PASSWORD
-        user.setPassword(passwordEncoder.encode(request.getPassword()));
+        user.setPassword(
+                passwordEncoder.encode(
+                        request.getPassword()
+                )
+        );
 
         User savedUser = userRepository.save(user);
 
-        log.info("New user registered: {}", savedUser.getEmail());
+        // AUTO CREATE WALLET
+        walletService.createWallet(savedUser);
+
+        log.info(
+                "New user registered: {}",
+                savedUser.getEmail()
+        );
 
         return new RegisterResponse(
                 savedUser.getId(),
@@ -60,13 +76,54 @@ public class AuthService {
                 )
         );
 
-        String token = jwtUtil.generateToken(request.getEmail());
+        String token = jwtUtil.generateToken(
+                request.getEmail()
+        );
 
-        log.info("User logged in successfully: {}", request.getEmail());
+        log.info(
+                "User logged in successfully: {}",
+                request.getEmail()
+        );
 
         return new LoginResponse(
                 token,
                 "Login successful"
         );
     }
+
+    public void setTransactionPin(
+            User user,
+            String transactionPin
+    ) {
+
+        user.setTransactionPin(
+                passwordEncoder.encode(transactionPin)
+        );
+
+        userRepository.save(user);
+
+        log.info(
+                "Transaction PIN set for user: {}",
+                user.getEmail()
+        );
+    }
+    public void completeKyc(
+        User user,
+        String panNumber,
+        String aadhaarMasked
+) {
+
+    user.setPanNumber(panNumber);
+
+    user.setAadhaarMasked(aadhaarMasked);
+
+    user.setKycStatus(KycStatus.VERIFIED);
+
+    userRepository.save(user);
+
+    log.info(
+            "KYC completed for user: {}",
+            user.getEmail()
+    );
+}
 }
