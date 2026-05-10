@@ -35,6 +35,13 @@ public class Wallet extends BaseEntity {
     private BigDecimal dailyTransferredAmount =
             BigDecimal.ZERO;
 
+    /**
+     * Optimistic lock version for safe concurrent balance updates.
+     * Hibernate maps this to a {@code version} column.
+     */
+    @Version
+    private Long version;
+
     @OneToOne
     @JoinColumn(name = "user_id", nullable = false)
     private User user;

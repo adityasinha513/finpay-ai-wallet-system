@@ -1,30 +1,56 @@
+# =============================================================================
+# FinPay backend configuration
+# -----------------------------------------------------------------------------
+# Production: set secrets via environment variables (see defaults after ${...:}).
+# Examples (PowerShell):
+#   $env:JWT_SECRET="(use a long random string, 32+ bytes for HS256)"
+#   $env:SPRING_DATASOURCE_PASSWORD="..."
+#   $env:SPRING_DATA_REDIS_HOST="localhost"
+# Docker Compose: pass the same variables under `environment:` for the app container.
+# =============================================================================
+
 spring:
   application:
     name: finpay-backend
 
   datasource:
-    url: jdbc:postgresql://localhost:5432/finpay
-    username: postgres
-    password: postgres
+    url: ${SPRING_DATASOURCE_URL:jdbc:postgresql://localhost:5432/finpay}
+    username: ${SPRING_DATASOURCE_USERNAME:postgres}
+    password: ${SPRING_DATASOURCE_PASSWORD:postgres}
 
   jpa:
     hibernate:
       ddl-auto: update
-
     show-sql: true
-
     properties:
       hibernate:
         format_sql: true
 
   data:
     redis:
-      host: localhost
-      port: 6379
+      host: ${SPRING_DATA_REDIS_HOST:localhost}
+      port: ${SPRING_DATA_REDIS_PORT:6379}
+
+  # Use Redis as the Spring Cache abstraction backend (required for @Cacheable to hit Redis).
+  cache:
+    type: redis
+    redis:
+      # Fallback default TTL when a cache name has no specific entry in RedisConfig.
+      time-to-live: 600000
 
 server:
   port: 8080
 
+# Actuator: expose health only; security permits /actuator/health without auth in SecurityConfig.
+management:
+  endpoints:
+    web:
+      exposure:
+        include: health
+  endpoint:
+    health:
+      show-details: never
+
 jwt:
-  secret: finpaySuperSecureJwtSecretKey2026BackendAuthSystem
-  expiration: 3600000
+  secret: ${JWT_SECRET:finpaySuperSecureJwtSecretKey2026BackendAuthSystem}
+  expiration: ${JWT_EXPIRATION:3600000}

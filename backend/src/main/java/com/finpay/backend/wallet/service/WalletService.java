@@ -8,11 +8,11 @@ import com.finpay.backend.wallet.dto.WalletResponse;
 import com.finpay.backend.wallet.entity.Wallet;
 import com.finpay.backend.wallet.enums.WalletStatus;
 import com.finpay.backend.wallet.repository.WalletRepository;
-import jakarta.transaction.Transactional;
 import lombok.RequiredArgsConstructor;
 import org.springframework.cache.annotation.CacheEvict;
 import org.springframework.cache.annotation.Cacheable;
 import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Transactional;
 
 import java.math.BigDecimal;
 import java.util.Random;
@@ -76,14 +76,13 @@ public class WalletService {
         );
     }
 
-    @Transactional
+    @Transactional(rollbackFor = Exception.class)
     @CacheEvict(
-            value = {
+            cacheNames = {
                     "wallets",
                     "walletBalance"
             },
-            key = "#userId",
-            allEntries = false
+            key = "#userId"
     )
     public WalletResponse creditWallet(
             Long userId,

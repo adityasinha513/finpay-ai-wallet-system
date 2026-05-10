@@ -1,5 +1,6 @@
 package com.finpay.backend.common.controller;
 
+import com.finpay.backend.common.dto.ApiResponse;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.RestController;
 
@@ -7,7 +8,10 @@ import org.springframework.web.bind.annotation.RestController;
 public class HealthController {
 
     @GetMapping("/health")
-    public String health() {
-        return "FinPay Backend Running";
+    public ApiResponse<String> health() {
+        return ApiResponse.ok(
+                "OK",
+                "FinPay Backend Running"
+        );
     }
 }
