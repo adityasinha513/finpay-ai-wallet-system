@@ -104,4 +104,20 @@ public class GlobalExceptionHandler {
                         "An unexpected error occurred"
                 ));
     }
+
+    @ExceptionHandler(
+        InsufficientBalanceException.class
+)
+public ResponseEntity<?> handleInsufficientBalance(
+        InsufficientBalanceException ex
+) {
+
+    return ResponseEntity
+            .badRequest()
+            .body(
+                    ApiResponse.fail(
+                            ex.getMessage()
+                    )
+            );
+}
 }

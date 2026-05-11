@@ -19,11 +19,14 @@ import org.springframework.security.web.authentication.UsernamePasswordAuthentic
 @RequiredArgsConstructor
 public class SecurityConfig {
 
-    private final JwtAuthenticationFilter jwtAuthenticationFilter;
+    private final JwtAuthenticationFilter
+            jwtAuthenticationFilter;
 
-    private final JwtAuthenticationEntryPoint jwtAuthenticationEntryPoint;
+    private final JwtAuthenticationEntryPoint
+            jwtAuthenticationEntryPoint;
 
-    private final RestAccessDeniedHandler restAccessDeniedHandler;
+    private final RestAccessDeniedHandler
+            restAccessDeniedHandler;
 
     @Bean
     public PasswordEncoder passwordEncoder() {
@@ -54,22 +57,26 @@ public class SecurityConfig {
                 )
 
                 .exceptionHandling(ex -> ex
-                        .authenticationEntryPoint(jwtAuthenticationEntryPoint)
-                        .accessDeniedHandler(restAccessDeniedHandler)
+                        .authenticationEntryPoint(
+                                jwtAuthenticationEntryPoint
+                        )
+                        .accessDeniedHandler(
+                                restAccessDeniedHandler
+                        )
                 )
 
                 .authorizeHttpRequests(auth -> auth
 
                         .requestMatchers(
                                 "/api/v1/auth/register",
-                                "/api/v1/auth/login"
-                        ).permitAll()
+                                "/api/v1/auth/login",
 
-                        .requestMatchers(
-                                "/health"
-                        ).permitAll()
+                                "/v3/api-docs/**",
+                                "/swagger-ui/**",
+                                "/swagger-ui.html",
 
-                        .requestMatchers(
+                                "/health",
+
                                 "/actuator/health",
                                 "/actuator/health/**"
                         ).permitAll()
