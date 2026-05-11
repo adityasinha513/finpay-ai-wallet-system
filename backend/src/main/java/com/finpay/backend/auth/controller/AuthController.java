@@ -5,6 +5,7 @@ import com.finpay.backend.auth.dto.LoginResponse;
 import com.finpay.backend.auth.dto.RegisterRequest;
 import com.finpay.backend.auth.dto.RegisterResponse;
 import com.finpay.backend.auth.service.AuthService;
+import com.finpay.backend.common.dto.ApiResponse;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
 import org.springframework.web.bind.annotation.*;
@@ -17,16 +18,22 @@ public class AuthController {
     private final AuthService authService;
 
     @PostMapping("/register")
-    public RegisterResponse register(
+    public ApiResponse<RegisterResponse> register(
             @Valid @RequestBody RegisterRequest request
     ) {
-        return authService.register(request);
+        return ApiResponse.ok(
+                "Registered",
+                authService.register(request)
+        );
     }
 
     @PostMapping("/login")
-    public LoginResponse login(
+    public ApiResponse<LoginResponse> login(
             @Valid @RequestBody LoginRequest request
     ) {
-        return authService.login(request);
+        return ApiResponse.ok(
+                "Login successful",
+                authService.login(request)
+        );
     }
 }

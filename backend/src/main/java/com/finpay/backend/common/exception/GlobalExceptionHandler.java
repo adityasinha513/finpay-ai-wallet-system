@@ -1,37 +1,77 @@
 package com.finpay.backend.common.exception;
 
+import com.finpay.backend.common.dto.ApiResponse;
+import lombok.extern.slf4j.Slf4j;
+import org.springframework.dao.OptimisticLockingFailureException;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
+import org.springframework.orm.ObjectOptimisticLockingFailureException;
 import org.springframework.web.bind.MethodArgumentNotValidException;
 import org.springframework.web.bind.annotation.ExceptionHandler;
 import org.springframework.web.bind.annotation.RestControllerAdvice;
 
-import java.time.LocalDateTime;
+import jakarta.persistence.OptimisticLockException;
+
 import java.util.HashMap;
 import java.util.Map;
 
 @RestControllerAdvice
+@Slf4j
 public class GlobalExceptionHandler {
 
     @ExceptionHandler(ResourceAlreadyExistsException.class)
-    public ResponseEntity<?> handleResourceAlreadyExists(
+    public ResponseEntity<ApiResponse<Void>> handleResourceAlreadyExists(
             ResourceAlreadyExistsException ex
     ) {
 
-        Map<String, Object> response = new HashMap<>();
+        return ResponseEntity
+                .status(HttpStatus.CONFLICT)
+                .body(ApiResponse.fail(ex.getMessage()));
+    }
 
-        response.put("timestamp", LocalDateTime.now());
-        response.put("message", ex.getMessage());
-        response.put("status", HttpStatus.CONFLICT.value());
+    @ExceptionHandler(ResourceNotFoundException.class)
+    public ResponseEntity<ApiResponse<Void>> handleResourceNotFound(
+            ResourceNotFoundException ex
+    ) {
 
-        return new ResponseEntity<>(
-                response,
-                HttpStatus.CONFLICT
-        );
+        return ResponseEntity
+                .status(HttpStatus.NOT_FOUND)
+                .body(ApiResponse.fail(ex.getMessage()));
+    }
+
+    @ExceptionHandler(WalletOperationException.class)
+    public ResponseEntity<ApiResponse<Void>> handleWalletOperation(
+            WalletOperationException ex
+    ) {
+
+        return ResponseEntity
+                .status(HttpStatus.BAD_REQUEST)
+                .body(ApiResponse.fail(ex.getMessage()));
+    }
+
+    /**
+     * Hibernate/JPA optimistic locking: concurrent balance updates on the same wallet row.
+     */
+    @ExceptionHandler({
+            ObjectOptimisticLockingFailureException.class,
+            OptimisticLockingFailureException.class,
+            OptimisticLockException.class
+    })
+    public ResponseEntity<ApiResponse<Void>> handleOptimisticLock(
+            Exception ex
+    ) {
+
+        log.warn("Optimistic lock conflict: {}", ex.getMessage());
+
+        return ResponseEntity
+                .status(HttpStatus.CONFLICT)
+                .body(ApiResponse.fail(
+                        "Wallet was updated by another request. Please retry."
+                ));
     }
 
     @ExceptionHandler(MethodArgumentNotValidException.class)
-    public ResponseEntity<?> handleValidationErrors(
+    public ResponseEntity<ApiResponse<Map<String, String>>> handleValidationErrors(
             MethodArgumentNotValidException ex
     ) {
 
@@ -46,61 +86,38 @@ public class GlobalExceptionHandler {
                         )
                 );
 
-        return new ResponseEntity<>(
-                errors,
-                HttpStatus.BAD_REQUEST
-        );
+        return ResponseEntity
+                .status(HttpStatus.BAD_REQUEST)
+                .body(ApiResponse.validationFailed(errors));
     }
 
     @ExceptionHandler(Exception.class)
-    public ResponseEntity<?> handleGenericException(
+    public ResponseEntity<ApiResponse<Void>> handleGenericException(
             Exception ex
     ) {
 
-        Map<String, Object> response = new HashMap<>();
+        log.error("Unexpected error", ex);
 
-        response.put("timestamp", LocalDateTime.now());
-        response.put("message", ex.getMessage());
-        response.put(
-                "status",
-                HttpStatus.INTERNAL_SERVER_ERROR.value()
-        );
-
-        return new ResponseEntity<>(
-                response,
-                HttpStatus.INTERNAL_SERVER_ERROR
-        );
+        return ResponseEntity
+                .status(HttpStatus.INTERNAL_SERVER_ERROR)
+                .body(ApiResponse.fail(
+                        "An unexpected error occurred"
+                ));
     }
-    @ExceptionHandler(ResourceNotFoundException.class)
-public ResponseEntity<?> handleResourceNotFound(
-        ResourceNotFoundException ex
+
+    @ExceptionHandler(
+        InsufficientBalanceException.class
+)
+public ResponseEntity<?> handleInsufficientBalance(
+        InsufficientBalanceException ex
 ) {
 
-    Map<String, Object> response = new HashMap<>();
-
-    response.put("timestamp", LocalDateTime.now());
-    response.put("message", ex.getMessage());
-    response.put("status", HttpStatus.NOT_FOUND.value());
-
-    return new ResponseEntity<>(
-            response,
-            HttpStatus.NOT_FOUND
-    );
-}
-        @ExceptionHandler(WalletOperationException.class)
-public ResponseEntity<?> handleWalletOperation(
-        WalletOperationException ex
-) {
-
-    Map<String, Object> response = new HashMap<>();
-
-    response.put("timestamp", LocalDateTime.now());
-    response.put("message", ex.getMessage());
-    response.put("status", HttpStatus.BAD_REQUEST.value());
-
-    return new ResponseEntity<>(
-            response,
-            HttpStatus.BAD_REQUEST
-    );
+    return ResponseEntity
+            .badRequest()
+            .body(
+                    ApiResponse.fail(
+                            ex.getMessage()
+                    )
+            );
 }
 }

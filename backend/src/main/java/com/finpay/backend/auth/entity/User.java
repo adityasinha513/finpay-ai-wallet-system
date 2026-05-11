@@ -6,7 +6,7 @@ import com.finpay.backend.wallet.entity.Wallet;
 import jakarta.persistence.*;
 import lombok.Getter;
 import lombok.Setter;
-
+import com.finpay.backend.auth.enums.Role;
 @Getter
 @Setter
 @Entity
@@ -26,6 +26,8 @@ public class User extends BaseEntity {
     private String panNumber;
     private String aadhaarMasked;
 
+    @Enumerated(EnumType.STRING)
+    private Role role = Role.USER;
     @Enumerated(EnumType.STRING)
     private KycStatus kycStatus = KycStatus.PENDING;
 

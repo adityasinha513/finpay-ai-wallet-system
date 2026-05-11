@@ -5,18 +5,19 @@ import com.finpay.backend.auth.dto.LoginResponse;
 import com.finpay.backend.auth.dto.RegisterRequest;
 import com.finpay.backend.auth.dto.RegisterResponse;
 import com.finpay.backend.auth.entity.User;
+import com.finpay.backend.auth.enums.KycStatus;
 import com.finpay.backend.auth.repository.UserRepository;
 import com.finpay.backend.common.exception.ResourceAlreadyExistsException;
 import com.finpay.backend.common.security.JwtUtil;
 import com.finpay.backend.wallet.service.WalletService;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
+import org.springframework.cache.annotation.CacheEvict;
 import org.springframework.security.authentication.AuthenticationManager;
 import org.springframework.security.authentication.UsernamePasswordAuthenticationToken;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
-
-import com.finpay.backend.auth.enums.KycStatus;
+import org.springframework.transaction.annotation.Transactional;
 
 @Service
 @RequiredArgsConstructor
@@ -29,6 +30,7 @@ public class AuthService {
     private final JwtUtil jwtUtil;
     private final WalletService walletService;
 
+    @Transactional(rollbackFor = Exception.class)
     public RegisterResponse register(RegisterRequest request) {
 
         if (userRepository.existsByEmail(request.getEmail())) {
@@ -42,7 +44,6 @@ public class AuthService {
         user.setName(request.getName());
         user.setEmail(request.getEmail());
 
-        // ENCRYPT PASSWORD
         user.setPassword(
                 passwordEncoder.encode(
                         request.getPassword()
@@ -51,7 +52,6 @@ public class AuthService {
 
         User savedUser = userRepository.save(user);
 
-        // AUTO CREATE WALLET
         walletService.createWallet(savedUser);
 
         log.info(
@@ -91,6 +91,13 @@ public class AuthService {
         );
     }
 
+    @CacheEvict(
+            cacheNames = {
+                    "wallets",
+                    "walletBalance"
+            },
+            key = "#user.id"
+    )
     public void setTransactionPin(
             User user,
             String transactionPin
@@ -107,23 +114,31 @@ public class AuthService {
                 user.getEmail()
         );
     }
+
+    @CacheEvict(
+            cacheNames = {
+                    "wallets",
+                    "walletBalance"
+            },
+            key = "#user.id"
+    )
     public void completeKyc(
-        User user,
-        String panNumber,
-        String aadhaarMasked
-) {
+            User user,
+            String panNumber,
+            String aadhaarMasked
+    ) {
 
-    user.setPanNumber(panNumber);
+        user.setPanNumber(panNumber);
 
-    user.setAadhaarMasked(aadhaarMasked);
+        user.setAadhaarMasked(aadhaarMasked);
 
-    user.setKycStatus(KycStatus.VERIFIED);
+        user.setKycStatus(KycStatus.VERIFIED);
 
-    userRepository.save(user);
+        userRepository.save(user);
 
-    log.info(
-            "KYC completed for user: {}",
-            user.getEmail()
-    );
-}
+        log.info(
+                "KYC completed for user: {}",
+                user.getEmail()
+        );
+    }
 }
