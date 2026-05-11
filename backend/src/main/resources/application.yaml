@@ -1,12 +1,5 @@
 # =============================================================================
 # FinPay backend configuration
-# -----------------------------------------------------------------------------
-# Production: set secrets via environment variables (see defaults after ${...:}).
-# Examples (PowerShell):
-#   $env:JWT_SECRET="(use a long random string, 32+ bytes for HS256)"
-#   $env:SPRING_DATASOURCE_PASSWORD="..."
-#   $env:SPRING_DATA_REDIS_HOST="localhost"
-# Docker Compose: pass the same variables under `environment:` for the app container.
 # =============================================================================
 
 spring:
@@ -21,7 +14,9 @@ spring:
   jpa:
     hibernate:
       ddl-auto: update
+
     show-sql: true
+
     properties:
       hibernate:
         format_sql: true
@@ -31,22 +26,28 @@ spring:
       host: ${SPRING_DATA_REDIS_HOST:localhost}
       port: ${SPRING_DATA_REDIS_PORT:6379}
 
-  # Use Redis as the Spring Cache abstraction backend (required for @Cacheable to hit Redis).
   cache:
     type: redis
+
     redis:
-      # Fallback default TTL when a cache name has no specific entry in RedisConfig.
       time-to-live: 600000
+
+  ai:
+    openai:
+      api-key: ${OPENAI_API_KEY:your-openai-api-key}
+      chat:
+        options:
+          model: gpt-4o-mini
 
 server:
   port: 8080
 
-# Actuator: expose health only; security permits /actuator/health without auth in SecurityConfig.
 management:
   endpoints:
     web:
       exposure:
         include: health
+
   endpoint:
     health:
       show-details: never
