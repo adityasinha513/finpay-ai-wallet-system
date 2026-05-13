@@ -18,7 +18,7 @@ import org.springframework.security.authentication.UsernamePasswordAuthenticatio
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
-
+import com.finpay.backend.auth.enums.Role;
 @Service
 @RequiredArgsConstructor
 @Slf4j
@@ -42,13 +42,16 @@ public class AuthService {
         User user = new User();
 
         user.setName(request.getName());
+
         user.setEmail(request.getEmail());
 
+        user.setRole(Role.USER);
+
         user.setPassword(
-                passwordEncoder.encode(
-                        request.getPassword()
-                )
-        );
+        passwordEncoder.encode(
+                request.getPassword()
+        )
+);
 
         User savedUser = userRepository.save(user);
 

@@ -16,15 +16,14 @@ import com.finpay.backend.wallet.entity.Wallet;
 import com.finpay.backend.wallet.enums.WalletStatus;
 import com.finpay.backend.wallet.repository.WalletRepository;
 import lombok.RequiredArgsConstructor;
-import org.springframework.cache.annotation.CacheEvict;
+import org.springframework.cache.Cache;
+import org.springframework.cache.CacheManager;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.PageRequest;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
-import com.finpay.backend.transaction.enums.TransactionStatus;
-import com.finpay.backend.transaction.enums.TransactionType;
 import java.math.BigDecimal;
 import java.util.UUID;
 
@@ -38,14 +37,9 @@ public class TransactionService {
 
     private final PasswordEncoder passwordEncoder;
 
+    private final CacheManager cacheManager;
+
     @Transactional
-    @CacheEvict(
-            value = {
-                    "wallets",
-                    "walletBalance"
-            },
-            allEntries = true
-    )
     public TransferResponse transferMoney(
             User sender,
             TransferRequest request
@@ -132,6 +126,13 @@ public class TransactionService {
                 transaction
         );
 
+        Long receiverUserId =
+                receiverWallet.getUser().getId();
+
+        evictWalletCaches(sender.getId());
+
+        evictWalletCaches(receiverUserId);
+
         return new TransferResponse(
                 referenceId,
                 senderWallet.getWalletNumber(),
@@ -201,8 +202,17 @@ getTransactionsByType(
 }
     public TransactionHistoryResponse
     getTransactionByReference(
+            User user,
             String referenceId
     ) {
+
+        Wallet userWallet = walletRepository
+                .findByUserId(user.getId())
+                .orElseThrow(() ->
+                        new ResourceNotFoundException(
+                                "Wallet not found"
+                        )
+                );
 
         Transaction transaction =
                 transactionRepository
@@ -212,6 +222,16 @@ getTransactionsByType(
                                         "Transaction not found"
                                 )
                         );
+
+        Long wid = userWallet.getId();
+
+        if (!transaction.getSenderWallet().getId().equals(wid)
+                && !transaction.getReceiverWallet().getId().equals(wid)) {
+
+            throw new ResourceNotFoundException(
+                    "Transaction not found"
+            );
+        }
 
         return mapToHistoryResponse(
                 transaction
@@ -352,5 +372,24 @@ getTransactionsByStatus(
                         .toString()
                         .substring(0, 12)
                         .toUpperCase();
+    }
+
+    private void evictWalletCaches(Long userId) {
+
+        if (userId == null) {
+            return;
+        }
+
+        Cache wallets = cacheManager.getCache("wallets");
+
+        if (wallets != null) {
+            wallets.evict(userId);
+        }
+
+        Cache walletBalance = cacheManager.getCache("walletBalance");
+
+        if (walletBalance != null) {
+            walletBalance.evict(userId);
+        }
     }
 }

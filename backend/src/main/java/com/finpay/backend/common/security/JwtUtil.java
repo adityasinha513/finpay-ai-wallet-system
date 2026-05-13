@@ -11,6 +11,7 @@ import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Component;
 
+import java.nio.charset.StandardCharsets;
 import java.security.Key;
 import java.util.Date;
 import java.util.Optional;
@@ -30,7 +31,25 @@ public class JwtUtil {
 
     @PostConstruct
     public void init() {
-        this.key = Keys.hmacShaKeyFor(secret.getBytes());
+
+        if (secret == null || secret.isBlank()) {
+            throw new IllegalStateException(
+                    "jwt.secret must be non-empty; set JWT_SECRET (or jwt.secret)."
+            );
+        }
+
+        String trimmed = secret.strip();
+
+        byte[] secretBytes = trimmed.getBytes(StandardCharsets.UTF_8);
+
+        if (secretBytes.length < 32) {
+            throw new IllegalStateException(
+                    "jwt.secret must be at least 32 bytes (256 bits) for HS256; "
+                            + "set JWT_SECRET to a longer value in production."
+            );
+        }
+
+        this.key = Keys.hmacShaKeyFor(secretBytes);
     }
 
     public String generateToken(String email) {

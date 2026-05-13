@@ -6,11 +6,13 @@ import org.springframework.dao.OptimisticLockingFailureException;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.orm.ObjectOptimisticLockingFailureException;
+import org.springframework.security.authentication.BadCredentialsException;
 import org.springframework.web.bind.MethodArgumentNotValidException;
 import org.springframework.web.bind.annotation.ExceptionHandler;
 import org.springframework.web.bind.annotation.RestControllerAdvice;
 
 import jakarta.persistence.OptimisticLockException;
+import jakarta.validation.ConstraintViolationException;
 
 import java.util.HashMap;
 import java.util.Map;
@@ -18,6 +20,38 @@ import java.util.Map;
 @RestControllerAdvice
 @Slf4j
 public class GlobalExceptionHandler {
+
+    @ExceptionHandler(BadCredentialsException.class)
+    public ResponseEntity<ApiResponse<Void>> handleBadCredentials(
+            BadCredentialsException ex
+    ) {
+
+        log.debug("Login failed: {}", ex.getMessage());
+
+        return ResponseEntity
+                .status(HttpStatus.UNAUTHORIZED)
+                .body(ApiResponse.fail("Invalid email or password"));
+    }
+
+    @ExceptionHandler(ConstraintViolationException.class)
+    public ResponseEntity<ApiResponse<Map<String, String>>> handleConstraintViolation(
+            ConstraintViolationException ex
+    ) {
+
+        Map<String, String> errors = new HashMap<>();
+
+        ex.getConstraintViolations()
+                .forEach(v ->
+                        errors.put(
+                                v.getPropertyPath().toString(),
+                                v.getMessage()
+                        )
+                );
+
+        return ResponseEntity
+                .status(HttpStatus.BAD_REQUEST)
+                .body(ApiResponse.validationFailed(errors));
+    }
 
     @ExceptionHandler(ResourceAlreadyExistsException.class)
     public ResponseEntity<ApiResponse<Void>> handleResourceAlreadyExists(
@@ -105,19 +139,13 @@ public class GlobalExceptionHandler {
                 ));
     }
 
-    @ExceptionHandler(
-        InsufficientBalanceException.class
-)
-public ResponseEntity<?> handleInsufficientBalance(
-        InsufficientBalanceException ex
-) {
+    @ExceptionHandler(InsufficientBalanceException.class)
+    public ResponseEntity<ApiResponse<Void>> handleInsufficientBalance(
+            InsufficientBalanceException ex
+    ) {
 
-    return ResponseEntity
-            .badRequest()
-            .body(
-                    ApiResponse.fail(
-                            ex.getMessage()
-                    )
-            );
-}
+        return ResponseEntity
+                .status(HttpStatus.BAD_REQUEST)
+                .body(ApiResponse.fail(ex.getMessage()));
+    }
 }

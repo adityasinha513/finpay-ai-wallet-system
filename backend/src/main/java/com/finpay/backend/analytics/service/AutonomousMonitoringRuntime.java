@@ -21,7 +21,10 @@ public class AutonomousMonitoringRuntime {
     private final FraudMonitoringAgentService
             fraudMonitoringAgentService;
 
-    @Scheduled(fixedRate = 300000)
+    @Scheduled(
+            initialDelayString = "${finpay.monitoring.initial-delay-ms:90000}",
+            fixedDelayString = "${finpay.monitoring.fixed-delay-ms:300000}"
+    )
     public void monitorFinancialRisk() {
 
         log.info(
@@ -33,27 +36,39 @@ public class AutonomousMonitoringRuntime {
 
         for (User user : users) {
 
-            FraudAlertResponse response =
-                    fraudMonitoringAgentService
-                            .monitorFraudRisk(
-                                    user
-                            );
+            try {
 
-            if (Boolean.TRUE.equals(
-                    response.getFraudDetected()
-            )) {
+                FraudAlertResponse response =
+                        fraudMonitoringAgentService
+                                .monitorFraudRisk(
+                                        user
+                                );
 
-                log.warn(
-                        """
-                        AI FRAUD ALERT:
-                        User ID: {}
-                        Severity: {}
-                        Message: {}
-                        """,
+                if (Boolean.TRUE.equals(
+                        response.getFraudDetected()
+                )) {
 
+                    log.warn(
+                            """
+                            AI FRAUD ALERT:
+                            User ID: {}
+                            Severity: {}
+                            Message: {}
+                            """,
+
+                            user.getId(),
+                            response.getSeverity(),
+                            response.getAlertMessage()
+                    );
+                }
+
+            } catch (Exception ex) {
+
+                log.error(
+                        "Autonomous fraud monitoring failed for user id={}: {}",
                         user.getId(),
-                        response.getSeverity(),
-                        response.getAlertMessage()
+                        ex.getMessage(),
+                        ex
                 );
             }
         }
